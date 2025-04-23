@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Spend Billionaire Money - Clean Version</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Tailwind CSS v2.2.19 -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <!-- FontAwesome 6.5.2 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+  <!-- Google Fonts: Poppins -->
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/poppins@3.3.1/400.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', 'sans-serif';
+      background: linear-gradient(119deg, #E0EAFC 0%, #CFDEF3 100%);
+      color: #2d3748;
+      min-height: 100vh;
+    }
+    .fade-enter {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    .fade-enter.fade-enter-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .fade-exit {
+      opacity: 1;
+      transition: opacity 0.4s;
+    }
+    .fade-exit.fade-exit-active {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .item-img {
+      max-width: 72px;
+      max-height: 72px;
+      border-radius: .5rem;
+    }
+    @media print {
+      html, body, #main-content, #game-content, #products-wrapper {
+        overflow: visible !important;
+        box-shadow: none !important;
+        background: white !important;
+      }
+      #start-overlay, #start-mask {
+        display: none !important;
+      }
+      .scrollbar-hide {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- Start Screen Overlay -->
+  <div id="start-overlay" class="fixed inset-0 z-40 flex items-center justify-center bg-white bg-opacity-90 transition-all">
+    <div class="bg-white rounded-xl shadow-xl px-8 py-10 text-center max-w-md w-full border border-blue-200 mx-2">
+      <div class="mb-5">
+        <i class="fas fa-coins text-yellow-400 text-5xl drop-shadow"></i>
+      </div>
+      <h1 class="text-3xl font-bold mb-2 tracking-tight">Spend a Billionaire's Fortune</h1>
+      <p class="text-lg text-gray-700 mb-6">Imagine you have <span class="font-bold text-green-500">$100,000,000,000</span>. See how fast you can spend it by "buying" real-world items!</p>
+      <button id="start-btn" class="transition focus:outline-none px-10 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-lg font-semibold rounded-full shadow hover:scale-105 hover:from-indigo-600 hover:to-blue-600">
+        Start Game
+      </button>
+      <div class="mt-6 text-xs text-gray-400">
+        No real purchases! This is just a fun simulation.<br>
+        <i class="fa fa-print"></i> Use your browser's Print to PDF for export.
+      </div>
+    </div>
+  </div>
+
+  <!-- Mask for PDF optimization (avoids printing overlay) -->
+  <div id="start-mask" class="fixed inset-0 bg-white pointer-events-none z-30" style="display:none"></div>
+
+  <!-- Game Content -->
+  <div id="game-content" class="relative z-0" style="display:none;">
+    <!-- Main Header - remaining money -->
+    <section class="w-full mb-6 py-6 px-3 sm:px-12 bg-gradient-to-r from-blue-50 to-blue-100 shadow">
+      <div class="container mx-auto flex flex-col items-center md:flex-row md:justify-between md:items-end">
+        <h2 class="text-2xl sm:text-3xl font-extrabold mb-2 md:mb-0 text-blue-900 flex items-center">
+          <i class="fas fa-piggy-bank mr-3 text-blue-400 text-2xl"></i>
+          Billions to Spend Simulator
+        </h2>
+        <div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <span class="text-lg sm:text-xl text-gray-700 font-medium">Your Remaining:</span>
+          <span id="money-remaining" class="font-mono text-3xl sm:text-4xl font-bold text-green-500 bg-white px-6 py-2 rounded shadow border border-green-100 tracking-wide select-all">$100,000,000,000</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products List -->
+    <div id="main-content" class="w-full max-w-5xl mx-auto px-2 pt-2">
+      <div id="products-wrapper" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- JavaScript will inject product cards here -->
+      </div>
+    </div>
+  </div>
+
+<script>
+// Products data (image URLs from original, or use similar royalty free/placeholder alternatives)
+const products = [
+  {
+    name: "Big Mac",
+    price: 2,
+    image: "https://neal.fun/spend/images/big-mac.jpg"
+  },
+  {
+    name: "Flip Flops",
+    price: 3,
+    image: "https://neal.fun/spend/images/flip-flops.jpg"
+  },
+  {
+    name: "Coca-Cola Pack",
+    price: 5,
+    image: "https://neal.fun/spend/images/coca-cola-pack.jpg"
+  },
+  {
+    name: "Movie Ticket",
+    price: 12,
+    image: "https://neal.fun/spend/images/movie-ticket.jpg"
+  },
+  {
+    name: "Book",
+    price: 15,
+    image: "https://neal.fun/spend/images/book.jpg"
+  },
+  {
+    name: "Lobster Dinner",
+    price: 45,
+    image: "https://neal.fun/spend/images/lobster-dinner.jpg"
+  },
+  {
+    name: "Video Game",
+    price: 60,
+    image: "https://neal.fun/spend/images/video-game.jpg"
+  },
+  {
+    name: "Amazon Echo",
+    price: 99,
+    image: "https://neal.fun/spend/images/amazon-echo.jpg"
+  },
+  {
+    name: "Year of Netflix",
+    price: 100,
+    image: "https://neal.fun/spend/images/year-of-netflix.jpg"
+  },
+  {
+    name: "Air Jordans",
+    price: 125,
+    image: "https://neal.fun/spend/images/air-jordans.jpg"
+  },
+  {
+    name: "Airpods",
+    price: 199,
+    image: "https://neal.fun/spend/images/airpods.jpg"
+  },
+  {
+    name: "Gaming Console",
+    price: 299,
+    image: "https://neal.fun/spend/images/gaming-console.jpg"
+  },
+  {
+    name: "Drone",
+    price: 350,
+    image: "https://neal.fun/spend/images/drone.jpg"
+  },
+  {
+    name: "Smartphone",
+    price: 699,
+    image: "https://neal.fun/spend/images/smartphone.jpg"
+  },
+  {
+    name: "Bike",
+    price: 800,
+    image: "https://neal.fun/spend/images/bike.jpg"
+  },
+  {
+    name: "Kitten",
+    price: 1500,
+    image: "https://neal.fun/spend/images/kitten.jpg"
+  },
+  {
+    name: "Puppy",
+    price: 1500,
+    image: "https://neal.fun/spend/images/puppy.jpg"
+  },
+  {
+    name: "Auto Rickshaw",
+    price: 2300,
+    image: "https://neal.fun/spend/images/auto-rickshaw.jpg"
+  },
+  {
+    name: "Horse",
+    price: 2500,
+    image: "https://neal.fun/spend/images/horse.jpg"
+  },
+  {
+    name: "Acre of Farmland",
+    price: 3000,
+    image: "https://neal.fun/spend/images/acre-of-farmland.jpg"
+  },
+  {
+    name: "Designer Handbag",
+    price: 5500,
+    image: "https://neal.fun/spend/images/designer-handbag.jpg"
+  },
+  {
+    name: "Hot Tub",
+    price: 6000,
+    image: "https://neal.fun/spend/images/hot-tub.jpg"
+  },
+  {
+    name: "Luxury Wine",
+    price: 7000,
+    image: "https://neal.fun/spend/images/luxury-wine.jpg"
+  },
+  {
+    name: "Diamond Ring",
+    price: 10000,
+    image: "https://neal.fun/spend/images/diamond-ring.jpg"
+  },
+  {
+    name: "Jet Ski",
+    price: 12000,
+    image: "https://neal.fun/spend/images/jet-ski.jpg"
+  },
+  {
+    name: "Rolex",
+    price: 15000,
+    image: "https://neal.fun/spend/images/rolex.jpg"
+  },
+  {
+    name: "Ford F-150",
+    price: 30000,
+    image: "https://neal.fun/spend/images/ford-f-150.jpg"
+  },
+  {
+    name: "Tesla",
+    price: 75000,
+    image: "https://neal.fun/spend/images/tesla.jpg"
+  },
+  {
+    name: "Monster Truck",
+    price: 150000,
+    image: "https://neal.fun/spend/images/monster-truck.jpg"
+  },
+  {
+    name: "Ferrari",
+    price: 250000,
+    image: "https://neal.fun/spend/images/ferrari.jpg"
+  },
+  {
+    name: "Single Family Home",
+    price: 300000,
+    image: "https://neal.fun/spend/images/single-family-home.jpg"
+  },
+  {
+    name: "Gold Bar",
+    price: 700000,
+    image: "https://neal.fun/spend/images/gold-bar.jpg"
+  },
+  {
+    name: "McDonalds Franchise",
+    price: 1500000,
+    image: "https://neal.fun/spend/images/mcdonalds-franchise.jpg"
+  },
+  {
+    name: "Superbowl Ad",
+    price: 5250000,
+    image: "https://neal.fun/spend/images/superbowl-ad.jpg"
+  },
+  {
+    name: "Yacht",
+    price: 7500000,
+    image: "https://neal.fun/spend/images/yacht.jpg"
+  },
+  {
+    name: "M1 Abrams",
+    price: 8000000,
+    image: "https://neal.fun/spend/images/m1-abrams.jpg"
+  },
+  {
+    name: "Formula 1 Car",
+    price: 15000000,
+    image: "https://neal.fun/spend/images/formula-1-car.jpg"
+  },
+  {
+    name: "Apache Helicopter",
+    price: 31000000,
+    image: "https://neal.fun/spend/images/apache-helicopter.jpg"
+  },
+  {
+    name: "Mansion",
+    price: 45000000,
+    image: "https://neal.fun/spend/images/mansion.jpg"
+  },
+  {
+    name: "Make a Movie",
+    price: 100000000,
+    image: "https://neal.fun/spend/images/make-a-movie.jpg"
+  },
+  {
+    name: "Boeing 747",
+    price: 148000000,
+    image: "https://neal.fun/spend/images/boeing-747.jpg"
+  },
+  {
+    name: "Mona Lisa",
+    price: 780000000,
+    image: "https://neal.fun/spend/images/mona-lisa.jpg"
+  },
+  {
+    name: "Skyscraper",
+    price: 850000000,
+    image: "https://neal.fun/spend/images/skyscraper.jpg"
+  },
+  {
+    name: "Cruise Ship",
+    price: 930000000,
+    image: "https://neal.fun/spend/images/cruise-ship.jpg"
+  },
+  {
+    name: "NBA Team",
+    price: 2120000000,
+    image: "https://neal.fun/spend/images/nba-team.jpg"
+  }
+];
+
+let totalMoney = 100000000000;
+let money = totalMoney;
+const purchases = new Array(products.length).fill(0);
+
+// Format as US dollars with thousands separator
+function fmt(x) {
+  return '$' + x.toLocaleString('en-US');
+}
+
+// Render the products
+function renderProducts() {
+  const wrapper = document.getElementById('products-wrapper');
+  wrapper.innerHTML = '';
+  for (let i = 0; i < products.length; ++i) {
+    let p = products[i];
+    let html = `
+      <div class="bg-white border border-blue-100 rounded-lg px-6 py-4 shadow-sm flex flex-col items-center transition transform hover:scale-[1.022]">
+        <img class="item-img mb-2 shadow-sm" src="${p.image}" alt="${p.name}">
+        <div class="font-semibold text-base text-blue-900 mb-1 text-center">${p.name}</div>
+        <div class="font-mono text-sm mb-2 text-gray-500 text-center">${fmt(p.price)}</div>
+        <div class="flex items-center justify-center space-x-2 my-2">
+          <button class="decrement px-2 py-1 text-lg rounded-full border border-gray-200 bg-gray-100 text-blue-700 focus:outline-none hover:bg-blue-100" data-idx="${i}" title="Sell one" aria-label="Sell one">
+            <i class="fas fa-minus"></i>
+          </button>
+          <span class="px-3 w-12 font-bold text-lg text-gray-800 text-center select-none" id="qty-${i}">${purchases[i]}</span>
+          <button class="increment px-2 py-1 text-lg rounded-full border border-green-200 bg-green-100 text-green-700 focus:outline-none hover:bg-green-200" data-idx="${i}" title="Buy one" aria-label="Buy one">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+        <div class="text-xs text-gray-400 mt-2 italic select-none">${purchases[i] === 0 ? '' : fmt(purchases[i]*p.price) + ' spent'}</div>
+      </div>
+    `;
+    let div = document.createElement('div');
+    div.innerHTML = html.trim();
+    // Event listeners for buttons
+    div.querySelector('.increment').addEventListener('click', () => buy(i));
+    div.querySelector('.decrement').addEventListener('click', () => sell(i));
+    wrapper.appendChild(div.firstChild);
+  }
+}
+
+// Update all displays: money, product qtys, 'spent' lines, etc.
+function updateDisplay() {
+  // Money remain
+  document.getElementById('money-remaining').textContent = fmt(money);
+  // Product quantities and "spent" lines
+  for (let i = 0; i < products.length; ++i) {
+    let qty = purchases[i];
+    const qtyElem = document.getElementById('qty-' + i);
+    if (qtyElem) qtyElem.textContent = qty;
+    // Show spent label
+    let card = qtyElem.closest('div.bg-white');
+    let spent = card.querySelector('.text-xs');
+    spent.textContent = qty ? fmt(qty * products[i].price) + ' spent' : '';
+    // Optionally: visually disable decrement if 0 quantity, or increment if money too low
+    let plus = card.querySelector('.increment');
+    let minus = card.querySelector('.decrement');
+    if (qty <= 0) {
+      minus.classList.add('opacity-40','cursor-not-allowed');
+      minus.disabled = true;
+    } else {
+      minus.classList.remove('opacity-40','cursor-not-allowed');
+      minus.disabled = false;
+    }
+    if (money < products[i].price) {
+      plus.classList.add('opacity-40','cursor-not-allowed');
+      plus.disabled = true;
+    } else {
+      plus.classList.remove('opacity-40','cursor-not-allowed');
+      plus.disabled = false;
+    }
+  }
+}
+
+// Buy an item
+function buy(i) {
+  if (money >= products[i].price) {
+    purchases[i]++;
+    money -= products[i].price;
+    updateDisplay();
+  }
+}
+
+// Sell an item
+function sell(i) {
+  if (purchases[i] > 0) {
+    purchases[i]--;
+    money += products[i].price;
+    updateDisplay();
+  }
+}
+
+function startGame() {
+  // Fade out overlay (and mask for PDF printing)
+  let overlay = document.getElementById('start-overlay');
+  overlay.classList.add('fade-exit','fade-exit-active');
+  setTimeout(function() {
+    overlay.style.display = 'none';
+    document.getElementById('game-content').style.display = '';
+    window.scrollTo(0, 0);
+  }, 400);
+  // Remove mask when printing
+  document.getElementById('start-mask').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Inject all products
+  renderProducts();
+  updateDisplay();
+  // Start game button
+  document.getElementById('start-btn').addEventListener('click', startGame);
+
+  // Remove overlay/mask for print/PDF
+  window.addEventListener('beforeprint', function() {
+    document.getElementById('start-overlay').style.display = 'none';
+    document.getElementById('start-mask').style.display = 'none';
+    document.getElementById('game-content').style.display = '';
+  });
+});
+</script>
+</body>
+</html>
+
